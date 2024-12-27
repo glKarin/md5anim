@@ -183,10 +183,45 @@ idVec3 & idVec3::operator+=(const idVec3 &b)
     return *this;
 }
 
+idVec3 operator+(const idVec3 &a, const idVec3 &b)
+{
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+
 idVec3 & idVec3::operator*=(double d)
 {
     this->x *= d;
     this->y *= d;
     this->z *= d;
     return *this;
+}
+
+void idVec3::Rotate(const idVec3 &r)
+{
+    idQuat quat;
+    quat.Set(x, y, z);
+    idAngles angles = quat.ToAngles();
+
+    idQuat quat2;
+    quat2.Set(r.x, r.y, r.z);
+    idAngles angles2 = quat.ToAngles();
+
+    angles.pitch += angles2.pitch;
+    angles.yaw += angles2.yaw;
+    angles.roll += angles2.roll;
+    quat = angles.ToQuat();
+
+    //quat.ToForward()
+    x = quat.x;
+    y = quat.y;
+    z = quat.z;
+}
+
+idVec3::idVec3(const char *str)
+{
+    idStr p = str;
+    p.trimSelf();
+    x = idLexer::GetDouble(p, &p);
+    y = idLexer::GetDouble(p, &p);
+    z = idLexer::GetDouble(p, &p);
 }

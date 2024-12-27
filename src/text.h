@@ -26,6 +26,7 @@ public:
     static float GetFloat(const idStr &str, idStr *pos = nullptr, int start = 0);
     static double GetDouble(const idStr &str, idStr *pos = nullptr, int start = 0);
     static idVec3 GetVec3(const idStr &str, bool b = true, idStr *pos = nullptr, int start = 0);
+    static idStr GetQuota(const idStr &str, bool b, idStr *pos, int start = 0);
 
 private:
     std::ifstream is;

@@ -108,3 +108,24 @@ idVec3 idLexer::GetVec3(const idStr &str, bool b, idStr *pos, int start)
 
     return v;
 }
+
+idStr idLexer::GetQuota(const idStr &str, bool b, idStr *pos, int start)
+{
+    auto startIndex = str.find("(", start);
+    auto endIndex = str.find(")", startIndex);
+
+    idStr v;
+    if(b)
+    {
+        v = str.substr(startIndex + 1, endIndex - startIndex - 1);
+    }
+    else
+    {
+        v = str.substr(startIndex, endIndex - startIndex + 1);
+    }
+
+    if(pos)
+        *pos = str.substr(endIndex + 1);
+
+    return v.trim();
+}

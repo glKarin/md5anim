@@ -98,7 +98,88 @@ idStr calc_rot(int mask, double pitch, double yaw, double roll)
     return str;
 }
 
-int append(int argc, char *argv[])
+int append_weapon(int argc, char *argv[])
+{
+//#define JOINT_NAME "socket_face01" // girl017_02
+#define JOINT_NAME "bip001_prop1" // "bip001_r_hand" // "bip001_neck2" // girl017_02
+#define GIRL "girl007a_02"
+#define WP "wp01a_noface"
+#ifdef _WIN32
+    idStr inAnimDir = R"(F:\pak\test\doom3\snow\models\girl007a_02\wp01a)";
+    idStr outAnimDir = R"(F:\pak\test\doom3\snow\models\girl007a_02\wp02b)";
+    idStr weaponMeshFile = R"(C:\Users\Administrator\Desktop\wp.md5mesh)";
+    idStr inMeshFile = R"(F:\pak\test\doom3\snow\models\girl007a_02\girl007a_02b.md5mesh)";
+    idStr outMeshFile = R"(F:\pak\test\doom3\snow\models\girl007a_02\girl007a_02_wp.md5mesh)";
+#else
+    idStr inAnimDir = "/sdcard/idtech4amm/doom3/snow/models/" GIRL "/" WP;
+    idStr outAnimDir = "/sdcard/idtech4amm/doom3/snow/models/" GIRL "/to_" WP;
+    idStr weaponMeshFile = "/sdcard/idtech4amm/doom3/snow/models/" GIRL "/" WP ".md5mesh";
+    idStr inMeshFile = R"(/sdcard/idtech4amm/doom3/snow/models/" GIRL "/" GIRL ".md5mesh)";
+    idStr outMeshFile = R"(/sdcard/idtech4amm/doom3/snow/models/" GIRL "/to_" GIRL "_" WP ".md5mesh)";
+#endif
+    
+    idStr rot = calc_rot(4, 0, 0, 180); // weapon
+
+/*    cout << "Input any to continue......" << endl;
+    char a;
+    cin >> a;*/
+
+    cout << "Scanning animations: " << inAnimDir << endl;
+    idStrList anims = idFileSystem::Ls(inAnimDir.c_str());
+    cout << "Read " << anims.size() << " animations" << endl;
+
+    idFileSystem::Mkdir(outAnimDir.c_str());
+    cout << "Create directory: " << outAnimDir << endl;
+
+    idLexer lexer;
+
+    lexer.Parse(weaponMeshFile);
+    idMd5MeshFile mesh;
+    mesh.Parse(lexer);
+
+    auto &joint = mesh.joints.joints[0];
+    //joint.rotation = rot;
+    cout << joint.Transform() << endl;
+
+    lexer.Parse(inMeshFile);
+    idMd5MeshFile masterMesh;
+    masterMesh.Parse(lexer);
+
+    cout << "Handle mesh file: " << inMeshFile << endl;
+    masterMesh.Append(mesh, JOINT_NAME);
+
+    idStr str;
+    masterMesh.Dump(str);
+    idFileSystem::Write(str, outMeshFile);
+    cout << "Save mesh to file: " << outMeshFile << endl;
+
+    for (const auto &item: anims)
+    {
+        cout << "Handle animation file: " << item << endl;
+
+        idStr filename = idFileSystem::Filename(item.c_str());
+
+        idStr toanimfile = idFileSystem::AppendPath({outAnimDir, filename});
+        cout << "Save to file: " << toanimfile << endl;
+
+        idMd5AnimFile anim;
+        lexer.Parse(item);
+        anim.Parse(lexer);
+
+        anim.AppendBones(mesh.joints, JOINT_NAME);
+
+        idStr text;
+        anim.Dump(text);
+
+        idFileSystem::Write(text, toanimfile.c_str());
+    }
+
+    cout << "Done!!!" << endl;
+
+    return 0;
+}
+
+int append_face(int argc, char *argv[])
 {
 //#define JOINT_NAME "socket_face01" // girl017_02
 #define JOINT_NAME "bip001_head" // "bip001_neck2" // girl017_02
@@ -113,7 +194,7 @@ int append(int argc, char *argv[])
     idStr outAnimDir = "/sdcard/idtech4amm/doom3/snow/models/" GIRL "/to_" WP;
     idStr faceMeshFile = "/sdcard/idtech4amm/doom3/snow/models/" GIRL "/" GIRL "_face.md5mesh";
 #endif
-    
+
     idStr rot = calc_rot(2 | 4, 0, 90, 90);
 
     cout << "Input any to continue......" << endl;
@@ -134,8 +215,8 @@ int append(int argc, char *argv[])
     mesh.Parse(lexer);
 
     auto &joint = mesh.joints.joints[0];
-    joint.SetRotation(rot);
-    cout << joint.transform << endl;
+    joint.rotation = rot;
+    cout << joint.Transform() << endl;
 
     for (const auto &item: anims)
     {
@@ -269,10 +350,10 @@ int cut(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    //append(argc, argv);
+    append_weapon(argc, argv);
     //rot(argc, argv);
     //rev(argc, argv);
     //trans(argc, argv);
-    cut(argc, argv);
+    //cut(argc, argv);
     return 0;
 }

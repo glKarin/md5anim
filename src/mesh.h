@@ -14,11 +14,19 @@ public:
     idStr name;
     int parentIndex = -1;
     int index = 0;
-    idStr transform = "(0 0 0) (0 0 0)"; // Absolution
+    idStr translation = "0 0 0"; // Absolution
+    idStr rotation = "0 0 0"; // Absolution
 
     void Parse(const idStr &line);
-    void SetRotation(const idStr &rot);
     idStr Numbers() const;
+    void Dump(idStr &str) const;
+
+    void SetTranslation(const idVec3 &trans);
+    idVec3 TranslationVector() const;
+
+    void SetRotation(const idVec3 &trans);
+    idVec3 RotationVector() const;
+    idStr Transform() const;
 };
 
 class idMd5MeshJoints {
@@ -26,18 +34,21 @@ public:
     idList<idMd5MeshJoint> joints;
 
     void Parse(idLexer &lexer, int numJoints);
+    void Dump(idStr &out) const;
 };
 
 class idMd5MeshVert
 {
 public:
     idStr vert;
+    void Dump(idStr &out) const;
 };
 
 class idMd5MeshTri
 {
 public:
     idStr tri;
+    void Dump(idStr &out) const;
 };
 
 class idMd5MeshWeight
@@ -47,9 +58,10 @@ public:
     int weightIndex;
     int jointIndex;
     idStr weightValue;
-    idVec3 pos;
+    idStr pos;
 
     void Translate(const idVec3 &t);
+    void Rotate(const idVec3 &r);
 
     void Parse(idLexer &lexer);
     void Dump(idStr &out) const;
@@ -66,6 +78,7 @@ public:
     idList<idMd5MeshWeight> weights;
 
     void Parse(idLexer &lexer);
+    void Dump(idStr &out) const;
 };
 
 class idMd5MeshFile
@@ -80,6 +93,8 @@ public:
     idList<idMd5Mesh> meshes;
 
     void Parse(idLexer &lexer);
+    void Dump(idStr &str) const;
+    void Append(const idMd5MeshFile &joints, const char *boneName);
 };
 
 #endif //_MESH_H

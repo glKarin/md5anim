@@ -42,6 +42,8 @@ public:
     z(z)
     {}
 
+    explicit idVec3(const char *str);
+
     void Set(double _x, double _y, double _z)
     {
         this->x = _x;
@@ -50,6 +52,7 @@ public:
     }
 
     idVec3 & operator+=(const idVec3 &b);
+    friend idVec3 operator+(const idVec3 &a, const idVec3 &b);
     idVec3 & operator*=(double d);
 
     void Restore(const idStr &text)
@@ -60,7 +63,7 @@ public:
         z = idLexer::GetDouble(p, &p);
     }
 
-    idStr ToString(int p = 10)
+    idStr ToString(int p = 10) const
     {
         idStr str;
         str += x;
@@ -68,9 +71,10 @@ public:
         str += y;
         str += " ";
         str += z;
-        str += " ";
         return str;
     }
+
+    void Rotate(const idVec3 &r);
 };
 
 class idQuat;

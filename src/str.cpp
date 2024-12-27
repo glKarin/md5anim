@@ -59,6 +59,13 @@ idStr idStr::dtostr(double d, int p)
     return is.str();
 }
 
+idStr idStr::itostr(int d)
+{
+    std::stringstream is;
+    is << d;
+    return is.str();
+}
+
 idStr & idStr::ToLower()
 {
     for (auto &ch : *this)

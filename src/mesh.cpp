@@ -1,6 +1,7 @@
 #include "mesh.h"
 #include <iostream>
 #include <cstdlib>
+#include <unordered_map>
 
 #include "text.h"
 
@@ -18,21 +19,49 @@ void idMd5MeshJoint::Parse(const idStr &line)
     auto pi = idStr::Trim(str.substr(0, end));
     parentIndex = stoi(pi);
 
-    transform = idStr::Trim(str.substr(end));
+    idStr transform = idStr::Trim(str.substr(end));
+    auto startIndex = transform.find("(");
+    auto endIndex = transform.find(")", startIndex);
+    translation = idStr::Trim(transform.substr(startIndex + 1, endIndex - startIndex - 1));
+
+    startIndex = transform.rfind("(");
+    endIndex = transform.rfind(")");
+    rotation = idStr::Trim(transform.substr(startIndex + 1, endIndex - startIndex - 1));
 }
 
-void idMd5MeshJoint::SetRotation(const idStr &rot)
+void idMd5MeshJoint::SetTranslation(const idVec3 &trans)
 {
-    auto pos = transform.find(')');
-    transform = transform.substr(0, pos + 1) + " ( " + rot + " )";
+    translation = trans.ToString();
+}
+
+idVec3 idMd5MeshJoint::TranslationVector() const
+{
+    return idVec3{translation.c_str()};
+}
+
+void idMd5MeshJoint::Dump(idStr &str) const
+{
+    str.append("\"").append(name).append("\"").append(" ").append(idStr::itostr(parentIndex)).append(" ").append(Transform());
+}
+
+void idMd5MeshJoint::SetRotation(const idVec3 &trans)
+{
+    rotation = trans.ToString();
+}
+
+idVec3 idMd5MeshJoint::RotationVector() const
+{
+    return idVec3{rotation.c_str()};
 }
 
 idStr idMd5MeshJoint::Numbers() const
 {
-    idStr tr = transform;
-    tr.Replace('(', ' ')
-            .Replace(')', ' ');
-    return tr.trim();
+    return translation + " " + rotation;
+}
+
+idStr idMd5MeshJoint::Transform() const
+{
+    return idStr("( ").append(translation) + " ) ( " + rotation + " )";
 }
 
 void idMd5MeshJoints::Parse(idLexer &lexer, int numJoints)
@@ -48,6 +77,37 @@ void idMd5MeshJoints::Parse(idLexer &lexer, int numJoints)
         joints.push_back(joint);
     }
     lexer.ReadLine();
+}
+
+void idMd5MeshJoints::Dump(idStr &out) const
+{
+    out.append("joints {\n");
+
+    std::unordered_map<int, const idStr &> boneMap;
+    std::for_each(joints.begin(), joints.end(), [&boneMap](const idMd5MeshJoint &x) {
+        boneMap.insert({x.index, x.name});
+    });
+
+    for (const auto &item: joints)
+    {
+        out.append("  ");
+        idStr str;
+        item.Dump(str);
+        if(string::size_type index; (index = str.find("//")) != string::npos)
+        {
+            str = str.substr(0, index);
+            str.trimSelf();
+        }
+        out.append(str);
+
+        out.append(" // ").append(idStr::itostr(item.index));
+        auto itor = boneMap.find(item.parentIndex);
+        if(itor != boneMap.end())
+            out.append(" ").append(itor->second);
+        out.append("\n");
+    }
+
+    out.append("}");
 }
 
 void idMd5MeshFile::Parse(idLexer &lexer) {
@@ -74,15 +134,7 @@ void idMd5MeshWeight::Parse(idLexer &lexer) {
     weightIndex = idLexer::GetInteger(line, &p);
     jointIndex = idLexer::GetInteger(p, &p);
     weightValue = idLexer::GetToken(p, &p);
-    pos = idLexer::GetVec3(p, true, &p);
-#if 0
-    //idVec3 tr(1.66727, 0.000062, 65.813);
-    jointIndex = 225;
-    //Translate(tr);
-    line = "";
-    Dump(line);
-    cout << "  " << line << endl;
-#endif
+    pos = idLexer::GetQuota(p, true, &p);
 }
 
 void idMd5Mesh::Parse(idLexer &lexer) {
@@ -122,16 +174,27 @@ void idMd5Mesh::Parse(idLexer &lexer) {
         weight.Parse(lexer);
         weights.push_back(weight);
     }
+    line = lexer.ReadLine();
+    idLexer::Skip(line, "}");
 }
 
 void idMd5MeshWeight::Translate(const idVec3 &t)
 {
-    pos += t;
+    idVec3 v = idLexer::GetVec3(pos);
+    v += t;
+    pos = v.ToString();
+}
+
+void idMd5MeshWeight::Rotate(const idVec3 &r)
+{
+    idVec3 v = idLexer::GetVec3(pos);
+    v.Rotate(r);
+    pos = v.ToString();
 }
 
 void idMd5MeshWeight::Dump(idStr &out) const
 {
-    out += "weight ";
+    out += "  weight ";
     out += weightIndex;
     out += " ";
     out += jointIndex;
@@ -139,10 +202,132 @@ void idMd5MeshWeight::Dump(idStr &out) const
     out += weightValue;
     out += " ";
     out += "( ";
-    out += pos.x;
-    out += " ";
-    out += pos.y;
-    out += " ";
-    out += pos.z;
+    out += pos;
     out += " )";
+}
+
+void idMd5MeshVert::Dump(idStr &out) const
+{
+    out.append(vert);
+}
+
+void idMd5MeshTri::Dump(idStr &out) const
+{
+    out.append(tri);
+}
+
+void idMd5Mesh::Dump(idStr &out) const
+{
+    out.append("mesh {\n");
+
+    out.append("  ").append("shader ").append(shader).append("\n");
+    out.append("\n");
+
+    out.append("  ").append("numverts ").append(idStr::itostr(numverts)).append("\n");
+    for (const auto &item: verts)
+    {
+        item.Dump(out);
+        out.append("\n");
+    }
+    out.append("\n");
+
+    out.append("  ").append("numtris ").append(idStr::itostr(numtris)).append("\n");
+    for (const auto &item: tris)
+    {
+        item.Dump(out);
+        out.append("\n");
+    }
+    out.append("\n");
+
+    out.append("  ").append("numweights ").append(idStr::itostr(numweights)).append("\n");
+    for (const auto &item: weights)
+    {
+        item.Dump(out);
+        out.append("\n");
+    }
+    out.append("\n");
+
+    out.append("}");
+}
+
+void idMd5MeshFile::Dump(idStr &str) const
+{
+    str.append("MD5Version ").append(MD5Version).append("\n");
+    str.append("commandline \"").append(commandline).append("\"\n");
+    str.append("\n");
+    str.append("numJoints ").append(idStr::itostr(numJoints)).append("\n");
+    str.append("numMeshes ").append(idStr::itostr(numMeshes)).append("\n");
+    str.append("\n");
+
+    joints.Dump(str);
+    str.append("\n");
+    str.append("\n");
+
+    for (const auto &item: meshes)
+    {
+        item.Dump(str);
+        str.append("\n");
+        str.append("\n");
+    }
+}
+
+void idMd5MeshFile::Append(const idMd5MeshFile &meshFile, const char *boneName)
+{
+    auto &myJoints = joints.joints;
+    auto &otherJoints = meshFile.joints.joints;
+
+    const auto &itor = std::find_if(myJoints.begin(), myJoints.end(), [boneName](const auto &x) {
+        return x.name == boneName;
+    });
+    if(itor == myJoints.cend())
+        throw idStr("bone not exists: ") + boneName;
+
+    const idMd5MeshJoint &bone = *itor;
+    int numBone = myJoints.size();
+    int i = 0;
+    int offsetIndex = bone.index;
+    idVec3 offsetPos = bone.TranslationVector();
+    idVec3 offsetRot = bone.RotationVector();
+
+    for (const auto &joint : otherJoints)
+    {
+        idStr bname = joint.name;
+        bname.ToLower();
+        //std::cout << bname.c_str() << std::endl;
+        bname.Replace('-', '_');
+        const int BoneIndex = numBone + i;
+
+        const int ParentBoneIndex = i == 0 ? offsetIndex : (numBone + i - 1);
+
+        idMd5MeshJoint j = joint;
+        j.index = BoneIndex;
+        j.parentIndex = ParentBoneIndex;
+        j.SetTranslation(offsetPos + joint.TranslationVector());
+        idVec3 rot = offsetRot;
+        rot.Rotate(joint.RotationVector());
+        j.SetRotation(rot);
+
+        myJoints.push_back(j);
+
+        i++;
+    }
+    this->numJoints += i;
+
+    for(i = 0; i < meshFile.numMeshes; i++)
+    {
+        auto mesh = meshFile.meshes[i];
+        for(int m = 0; m < mesh.numweights; m++)
+        {
+            auto &weight = mesh.weights[m];
+            /*if(weight.jointIndex == 0)
+            {
+                //cout << otherJoints[0].RotationVector().ToString() << endl;
+                weight.Rotate(otherJoints[0].RotationVector());
+            }*/
+            weight.jointIndex += numBone;
+        }
+
+        meshes.push_back(mesh);
+        numMeshes++;
+    }
 }

@@ -57,6 +57,7 @@ public:
     }
 
     static idStr dtostr(double d, int p = 10);
+    static idStr idStr::itostr(int d);
 
     static idStr dtostr(const idList<double> list, int p = 10);
 };

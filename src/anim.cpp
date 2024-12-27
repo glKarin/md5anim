@@ -508,8 +508,8 @@ void idMd5AnimFile::AppendBones(const idMd5MeshJoints &joints, const char *boneN
         throw idStr("bone not exists: ") + boneName;
 
     const idMd5AnimBone &bone = *itor;
-    int n = boneList.size() * 6;
-    int numBone = boneList.size();
+    auto n = boneList.size() * 6;
+    auto numBone = boneList.size();
     int i = 0;
     idStr parentBoneName = bone.name;
 
@@ -526,7 +526,7 @@ void idMd5AnimFile::AppendBones(const idMd5MeshJoints &joints, const char *boneN
         idStr h = idStr::Format("  \"%s\" %d 63 %d // %d %s", bname.c_str(), ParentBoneIndex, n, BoneIndex, parentBoneName.c_str());
         hierarchy.joints.push_back(h);
 
-        baseFrame.joints.push_back("  " + joint.transform + idStr::Format(" // %d %s", BoneIndex, bname.c_str()));
+        baseFrame.joints.push_back("  " + joint.Transform() + idStr::Format(" // %d %s", BoneIndex, bname.c_str()));
 
         for (auto &frame: frames)
         {
